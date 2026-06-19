@@ -11,7 +11,7 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://slguidelk.netlify.app'  // ← my Netlify URL
+    'https://slguidelk.netlify.app'
   ]
 }));
 app.use(express.json());

@@ -3,8 +3,7 @@ const router = express.Router();
 const Event = require('../models/Event');
 const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
-const fs = require('fs');
-const path = require('path');
+const cloudinary = require('cloudinary').v2;
 
 // GET all events (public)
 router.get('/', async (req, res) => {
@@ -45,7 +44,8 @@ router.get('/:id', async (req, res) => {
 // POST create event (admin only)
 router.post('/', auth, upload.array('photos', 10), async (req, res) => {
   try {
-    const photos = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
+    // Cloudinary returns full https:// URL in f.path
+    const photos = req.files ? req.files.map(f => f.path) : [];
     const event = new Event({ ...req.body, photos });
     await event.save();
     res.status(201).json(event);
@@ -60,7 +60,7 @@ router.put('/:id', auth, upload.array('photos', 10), async (req, res) => {
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: 'Not found' });
 
-    const newPhotos = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
+    const newPhotos = req.files ? req.files.map(f => f.path) : [];
     const existingPhotos = req.body.existingPhotos
       ? JSON.parse(req.body.existingPhotos)
       : event.photos;
@@ -82,10 +82,18 @@ router.delete('/:id', auth, async (req, res) => {
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: 'Not found' });
 
-    event.photos.forEach(photo => {
-      const filePath = path.join(__dirname, '..', photo);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    });
+    // Delete photos from Cloudinary
+    for (const photoUrl of event.photos) {
+      if (photoUrl && photoUrl.includes('cloudinary')) {
+        try {
+          const parts = photoUrl.split('/');
+          const filename = parts[parts.length - 1].split('.')[0];
+          await cloudinary.uploader.destroy(`slguide/${filename}`);
+        } catch (e) {
+          console.error('Cloudinary delete error:', e.message);
+        }
+      }
+    }
 
     await Event.findByIdAndDelete(req.params.id);
     res.json({ message: 'Deleted successfully' });

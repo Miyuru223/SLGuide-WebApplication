@@ -3,8 +3,7 @@ const router = express.Router();
 const Destination = require('../models/Destination');
 const auth = require('../middleware/auth');
 const upload = require('../middleware/upload');
-const fs = require('fs');
-const path = require('path');
+const cloudinary = require('cloudinary').v2;
 
 // GET all destinations (public)
 router.get('/', async (req, res) => {
@@ -45,7 +44,8 @@ router.get('/:id', async (req, res) => {
 // POST create destination (admin only)
 router.post('/', auth, upload.array('photos', 10), async (req, res) => {
   try {
-    const photos = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
+    // Cloudinary returns full https:// URLs in file.path
+    const photos = req.files ? req.files.map(f => f.path) : [];
     const destination = new Destination({ ...req.body, photos });
     await destination.save();
     res.status(201).json(destination);
@@ -60,7 +60,7 @@ router.put('/:id', auth, upload.array('photos', 10), async (req, res) => {
     const destination = await Destination.findById(req.params.id);
     if (!destination) return res.status(404).json({ message: 'Not found' });
 
-    const newPhotos = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
+    const newPhotos = req.files ? req.files.map(f => f.path) : [];
     const existingPhotos = req.body.existingPhotos
       ? JSON.parse(req.body.existingPhotos)
       : destination.photos;
@@ -82,11 +82,20 @@ router.delete('/:id', auth, async (req, res) => {
     const destination = await Destination.findById(req.params.id);
     if (!destination) return res.status(404).json({ message: 'Not found' });
 
-    // Delete associated photos
-    destination.photos.forEach(photo => {
-      const filePath = path.join(__dirname, '..', photo);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    });
+    // Delete photos from Cloudinary
+    for (const photoUrl of destination.photos) {
+      if (photoUrl && photoUrl.includes('cloudinary')) {
+        try {
+          // Extract public_id from Cloudinary URL
+          const parts = photoUrl.split('/');
+          const filename = parts[parts.length - 1].split('.')[0];
+          const folder = 'slguide';
+          await cloudinary.uploader.destroy(`${folder}/${filename}`);
+        } catch (e) {
+          console.error('Failed to delete from Cloudinary:', e.message);
+        }
+      }
+    }
 
     await Destination.findByIdAndDelete(req.params.id);
     res.json({ message: 'Deleted successfully' });

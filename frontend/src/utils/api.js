@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-//const API = axios.create({ baseURL: 'http://localhost:5000/api' });
-const API = axios.create({ 
-  baseURL: 'https://slguide-backend.onrender.com/api' 
+const API = axios.create({
+  baseURL: 'https://slguide-backend.onrender.com/api'
 });
 
 API.interceptors.request.use(config => {
@@ -13,8 +12,9 @@ API.interceptors.request.use(config => {
 
 export const getImageUrl = (path) => {
   if (!path) return null;
+  // Cloudinary URLs and any full URLs return as-is
   if (path.startsWith('http')) return path;
-  //return `http://localhost:5000${path}`;
+  // Fallback for any old local upload paths
   return `https://slguide-backend.onrender.com${path}`;
 };
 
