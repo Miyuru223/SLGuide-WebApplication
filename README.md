@@ -8,7 +8,7 @@ A full-stack MERN web application for tourists to discover Sri Lanka's historica
 - 🏠 **Home Page** — Hero section, featured destinations & hotels, stats
 - 🏛️ **Destinations** — Browse & search historical sites with category filters
 - 🏨 **Hotels** — Browse & search accommodations with star & category filters
-- 🎉 **Events/Festivals** - Browse & search local events & festivals with category filters
+- 🎉 **Festivals** — Browse & search local events & festivals with category filters
 - 🔍 **Detail Pages** — Full info, photo galleries, opening hours, pricing
 - 📱 Responsive design for mobile & desktop
 
